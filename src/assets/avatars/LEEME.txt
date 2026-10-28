@@ -1,0 +1,1 @@
+Pon aquí tus fotos de gatos (png, jpg, jpeg, webp, svg, gif). Se detectan solas: cada usuario recibe una distinta por defecto y puede cambiarla en su perfil. Reinicia npm run dev tras agregar archivos.

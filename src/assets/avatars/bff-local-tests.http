@@ -1,0 +1,115 @@
+# Pruebas del BFF en tu PC. Requiere la extensión "REST Client" de VS Code (clic en "Send Request" sobre cada bloque).
+# Ejecútalas EN ORDEN: la 3 usa el paymentId de la 2, y la 9 usa el pedido de la 3.
+@baseUrl = http://localhost:8088
+
+### 1. Catálogo -> 200 con los 12 productos
+GET {{baseUrl}}/api/catalog/products
+
+### 2. Pago aprobado -> 200 con paymentId, authorizationCode, amount
+# @name charge
+POST {{baseUrl}}/api/payments/charge
+Content-Type: application/json
+
+{
+  "items": [{ "productoId": 7, "cantidad": 1 }],
+  "card": { "number": "4242424242424242", "name": "TEST USER", "expiry": "12/29", "cvv": "123" }
+}
+
+### 3. Crear pedido con ese pago -> 201 con id y estado CREADO
+# @name order
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "clienteId": "CLI-123456785",
+  "clienteNombre": "Test User",
+  "clienteEmail": "test@example.com",
+  "clienteDireccion": "Av. Test 123, Santiago",
+  "clienteRut": "12.345.678-5",
+  "paymentId": "{{charge.response.body.$.paymentId}}",
+  "items": [{ "productoId": 7, "cantidad": 1 }]
+}
+
+### 4. Reusar el mismo pago -> 409 PAYMENT_USED
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "clienteId": "CLI-123456785", "clienteNombre": "Test User", "clienteEmail": "test@example.com",
+  "clienteDireccion": "Av. Test 123", "clienteRut": "12.345.678-5",
+  "paymentId": "{{charge.response.body.$.paymentId}}",
+  "items": [{ "productoId": 7, "cantidad": 1 }]
+}
+
+### 5. Pedido SIN pago -> 402 PAYMENT_NOT_FOUND
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "clienteId": "CLI-1", "clienteNombre": "Test User", "clienteEmail": "test@example.com",
+  "clienteDireccion": "Av. Test 123", "clienteRut": "12.345.678-5",
+  "items": [{ "productoId": 7, "cantidad": 1 }]
+}
+
+### 6. Tarjeta rechazada -> 402 CARD_DECLINED
+POST {{baseUrl}}/api/payments/charge
+Content-Type: application/json
+
+{
+  "items": [{ "productoId": 7, "cantidad": 1 }],
+  "card": { "number": "4000000000000002", "name": "TEST USER", "expiry": "12/29", "cvv": "123" }
+}
+
+### 7. Sin fondos -> 402 INSUFFICIENT_FUNDS
+POST {{baseUrl}}/api/payments/charge
+Content-Type: application/json
+
+{
+  "items": [{ "productoId": 7, "cantidad": 1 }],
+  "card": { "number": "4000000000009995", "name": "TEST USER", "expiry": "12/29", "cvv": "123" }
+}
+
+### 8. Más unidades que el stock (el producto 9 tiene 15) -> 409 InvalidStockException
+POST {{baseUrl}}/api/payments/charge
+Content-Type: application/json
+
+{
+  "items": [{ "productoId": 9, "cantidad": 99 }],
+  "card": { "number": "4242424242424242", "name": "TEST USER", "expiry": "12/29", "cvv": "123" }
+}
+
+### 9. Precio manipulado: el total del pedido debe ser el del catálogo (14500), NO 1
+# @name charge2
+POST {{baseUrl}}/api/payments/charge
+Content-Type: application/json
+
+{
+  "items": [{ "productoId": 7, "cantidad": 1 }],
+  "card": { "number": "4242424242424242", "name": "TEST USER", "expiry": "12/29", "cvv": "123" }
+}
+
+###
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "clienteId": "CLI-2", "clienteNombre": "Test User", "clienteEmail": "test@example.com",
+  "clienteDireccion": "Av. Test 123", "clienteRut": "12.345.678-5",
+  "paymentId": "{{charge2.response.body.$.paymentId}}",
+  "items": [{ "productoId": 7, "cantidad": 1, "precioUnitario": 1 }]
+}
+
+### 10. Listar pedidos (admin) -> 200
+GET {{baseUrl}}/api/orders
+
+### 11. Cambiar estado del pedido de la prueba 3 -> 200 (o 409 si la transición no está permitida)
+PUT {{baseUrl}}/api/orders/{{order.response.body.$.id}}/status
+Content-Type: application/json
+
+{ "nuevoEstado": "ACEPTADO" }
+
+### 12. Editar stock de un producto (admin) -> 200 con el stock nuevo
+PUT {{baseUrl}}/api/catalog/products/7
+Content-Type: application/json
+
+{ "stock": 40 }
