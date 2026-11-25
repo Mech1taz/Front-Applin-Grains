@@ -11,3 +11,10 @@
     @apply outline-2 outline-offset-2 outline-ocre dark:outline-lima;
   }
 }
+
+@layer components {
+  .field {
+    @apply rounded-lg border border-oliva-claro/40 bg-crema px-2 py-1.5 text-sm text-cafe
+           dark:bg-cafe/40 dark:text-crema;
+  }
+}

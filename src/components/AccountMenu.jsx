@@ -38,7 +38,13 @@ export default function AccountMenu() {
               </div>
               <Link to="/perfil" className={item}>Mi perfil</Link>
               <Link to="/mis-pedidos" className={item}>Mis pedidos</Link>
-              {isAdmin && <Link to="/admin" className={item}>Panel de administración</Link>}
+              {isAdmin && (
+                <>
+                  <Link to="/admin" className={item}>Panel de administración</Link>
+                  <Link to="/reports" className={item}>Reportes</Link>
+                  <Link to="/audit" className={item}>Auditoría</Link>
+                </>
+              )}
               <button onClick={logout} className={item}>Cerrar sesión</button>
             </>
           ) : (

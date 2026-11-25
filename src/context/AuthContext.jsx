@@ -111,7 +111,16 @@ export function AuthProvider({ children }) {
             kind: account.tenantId === MSA_TENANT ? 'Cuenta personal Microsoft' : 'Cuenta organizacional',
           }
         : null,
-      isAdmin: roles.includes(ADMIN_ROLE) || ADMIN_EMAILS.includes(email.toLowerCase()),
+      isAdmin:
+        roles.includes(ADMIN_ROLE) ||
+        ADMIN_EMAILS.some((adm) => {
+          const a = adm.toLowerCase();
+          const e = email.toLowerCase();
+          if (!a || !e) return false;
+          if (a === e || a.includes(e) || e.includes(a)) return true;
+          const cleanAdm = a.replace(/_([^_]+)#ext#.*/, '@$1');
+          return cleanAdm === e;
+        }),
       login,
       logout,
     };

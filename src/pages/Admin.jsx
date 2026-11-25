@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAsync, useProducts } from '../hooks/useProducts.js';
 import { orderService } from '../services/orderService.js';
 import { catalogService } from '../services/catalogService.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { formatPrice } from '../utils/format.js';
+import { LABELS } from './MyOrders.jsx';
 
 // Estados de OrderStatus (ms-orders), en orden de flujo.
 const KNOWN_STATUSES = ['CREADO', 'ACEPTADO', 'EN_PREPARACION', 'DESPACHADO', 'ENTREGADO', 'CANCELADO'];
@@ -41,17 +43,18 @@ function OrderCard({ order, statuses }) {
   };
 
   return (
-    <li className="rounded-2xl bg-white p-4 shadow-sm dark:bg-oliva">
+    <li className="rounded-3xl bg-white p-5 shadow-sm dark:bg-oliva">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-display text-lg font-bold text-cafe dark:text-crema">{order.number}</p>
           <p className="text-sm">{order.customer} · {order.email}</p>
           {order.createdAt && <p className="text-xs opacity-70">{new Date(order.createdAt).toLocaleString('es-CL')}</p>}
+          <Link to={`/audit?order=${order.id}`} className="mt-1 inline-block text-xs underline">Ver historial</Link>
         </div>
         <div className="text-right">
           <p className="text-lg font-bold text-cafe dark:text-lima">{formatPrice(order.total)}</p>
           <select value={status} disabled={saving || allowed.length === 0} onChange={(e) => save(e.target.value)} aria-label={`Estado de ${order.number}`} className={`${input} mt-1 disabled:opacity-50`}>
-            {options.map((s) => <option key={s} value={s}>{s}</option>)}
+            {options.map((s) => <option key={s} value={s}>{LABELS[s] || s}</option>)}
           </select>
         </div>
       </div>
@@ -168,14 +171,13 @@ export default function Admin() {
   );
 
   return (
-    <section className="mx-auto max-w-5xl px-4 py-10">
-      <h1 className="font-display text-4xl font-bold text-cafe dark:text-crema">Panel de administración</h1>
-      <div className="mt-5 flex gap-2">{chip(tab === 'orders', () => setTab('orders'), 'Pedidos')}{chip(tab === 'stock', () => setTab('stock'), 'Productos y stock')}</div>
+    <section>
+      <div className="flex gap-2">{chip(tab === 'orders', () => setTab('orders'), 'Pedidos')}{chip(tab === 'stock', () => setTab('stock'), 'Productos y stock')}</div>
 
       {tab === 'orders' && (
         <div className="mt-6">
           <div className="mb-4 flex flex-wrap items-center gap-2">
-            {['TODOS', ...statuses].map((s) => chip(filter === s, () => setFilter(s), s))}
+            {['TODOS', ...statuses].map((s) => chip(filter === s, () => setFilter(s), s === 'TODOS' ? 'Todos' : (LABELS[s] || s)))}
             <button onClick={orders.reload} className="ml-auto text-sm underline">Actualizar</button>
           </div>
           {orders.loading && <p>Cargando pedidos…</p>}
@@ -186,7 +188,7 @@ export default function Admin() {
       )}
 
       {tab === 'stock' && (
-        <div className="mt-6 overflow-x-auto rounded-2xl bg-white shadow-sm dark:bg-oliva">
+        <div className="mt-6 overflow-x-auto rounded-3xl bg-white shadow-sm dark:bg-oliva">
           <NewProductForm onCreated={products.reload} />
           {products.loading && <p className="p-4">Cargando…</p>}
           {products.error && <p className={`p-4 ${danger}`}>{products.error.message}</p>}

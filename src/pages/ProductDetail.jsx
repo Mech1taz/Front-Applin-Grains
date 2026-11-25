@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useProduct } from '../hooks/useProducts.js';
 import { useCart } from '../context/CartContext.jsx';
 import { formatPrice } from '../utils/format.js';
+import { isFavorite, toggleFavorite } from '../utils/favorites.js';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -11,6 +12,13 @@ export default function ProductDetail() {
   const { addItem, openCart } = useCart();
   const [qty, setQty] = useState(1);
   const [adding, setAdding] = useState(false);
+  const [fav, setFav] = useState(false);
+
+  useEffect(() => {
+    if (product) {
+      setFav(isFavorite(product.id));
+    }
+  }, [product]);
 
   if (loading) return <div className="mx-auto mt-10 h-96 max-w-5xl animate-pulse rounded-2xl bg-oliva-claro/15" />;
   if (error) {
@@ -31,20 +39,34 @@ export default function ProductDetail() {
     if (ok) openCart();
   };
 
+  const handleToggleFav = () => {
+    const next = toggleFavorite(product);
+    setFav(next);
+  };
+
   return (
     <motion.article
       initial={{ opacity: 0 }} animate={{ opacity: 1 }}
       className="mx-auto grid max-w-5xl gap-10 px-4 py-10 md:grid-cols-2"
     >
-      <div className="overflow-hidden rounded-3xl bg-white shadow-md dark:bg-oliva">
+      <div className="relative overflow-hidden rounded-3xl bg-white shadow-md dark:bg-oliva">
         {product.image
           ? <img src={product.image} alt={product.name} className={`aspect-square w-full object-cover ${soldOut ? 'grayscale' : ''}`} />
           : <div className="flex aspect-square items-center justify-center text-7xl">☕</div>}
+        <button
+          onClick={handleToggleFav}
+          aria-label={fav ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+          className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-lg shadow-md transition hover:scale-110 dark:bg-cafe/90"
+        >
+          {fav ? '❤️' : '🤍'}
+        </button>
       </div>
 
       <div className="flex flex-col">
         <Link to="/" className="mb-4 text-sm underline">← Volver al catálogo</Link>
-        <h1 className="font-display text-4xl font-bold text-cafe dark:text-crema">{product.name}</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-4xl font-bold text-cafe dark:text-crema">{product.name}</h1>
+        </div>
         <p className="mt-3 text-3xl font-bold text-cafe dark:text-lima">{formatPrice(product.price)}</p>
         <p className="mt-5 max-w-prose whitespace-pre-line leading-relaxed">{product.description}</p>
 
@@ -59,7 +81,6 @@ export default function ProductDetail() {
             <button onClick={() => setQty((q) => Math.min(product.stock, q + 1))} disabled={soldOut || qty >= product.stock} aria-label="Aumentar cantidad" className="h-8 w-8 rounded-full font-bold disabled:opacity-40">+</button>
           </div>
 
-          {/* Regla de negocio: stock === 0 => botón deshabilitado */}
           <button
             onClick={handleAdd}
             disabled={soldOut || adding}
